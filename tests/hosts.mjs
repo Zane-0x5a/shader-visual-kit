@@ -26,13 +26,13 @@ async function run(command,args,cwd){
   if(code!==0)throw new Error(`${command} ${args.join(' ')} failed in ${cwd}:\n${log}`);
 }
 async function freePort(){const s=createServer();await new Promise(r=>s.listen(0,'127.0.0.1',r));const p=s.address().port;await new Promise(r=>s.close(r));return p;}
-async function start(cwd){
-  const port=await freePort(),url=`http://127.0.0.1:${port}/`;
-  const child=spawn(process.execPath,[resolve('cli/index.mjs'),'preview','--project',cwd,'--url',url,'--json','--','npm','run','start','--',String(port)],{windowsHide:true});
+async function start(cwd,{path='/',command=port=>['npm','run','start','--',String(port)]}={}){
+  const port=await freePort(),url=`http://127.0.0.1:${port}${path}`;
+  const child=spawn(process.execPath,[resolve('cli/index.mjs'),'preview','--project',cwd,'--url',url,'--json','--',...command(port)],{windowsHide:true});
   children.push(child);let log='';
   child.stdout.on('data',s=>log+=s);child.stderr.on('data',s=>log+=s);
   for(let n=0;n<400;n++){
-    if(log.includes('address-responsive'))return {url,child};
+    if(log.includes('address-responsive'))return {url,child,port};
     if(child.exitCode!==null)throw new Error(log);
     await new Promise(r=>setTimeout(r,100));
   }
@@ -70,6 +70,50 @@ async function installHost(name,version,workspace){
   console.log(`${name}: original SSR entry builds after migration; Paper ${version} resolves locally`);
   return {folder,app,visual,version,paperPath,lock};
 }
+// The preview page as the skill sets it up: copied into a task-local project whose Paper matches
+// the host's, behind a dev-only HTML entry, started through the CLI.
+async function previewPage(version){
+  const folder=join(root,'preview-page'),shell=join(folder,'shader-preview');
+  await mkdir(shell,{recursive:true});
+  await cp(resolve('plugin/skills/shader-visual-kit/assets/preview'),shell,{recursive:true});
+  await json(join(folder,'package.json'),{name:'preview-page',private:true,type:'module',dependencies:{'@paper-design/shaders-react':version,react:'19.3.0','react-dom':'19.3.0',vite:'8.3.0'}});
+  await json(join(folder,'tsconfig.json'),{compilerOptions:{jsx:'react-jsx',module:'ESNext',moduleResolution:'bundler',target:'ES2022'}});
+  await writeFile(join(folder,'index.html'),'<!doctype html><html lang="en"><head><meta charset="UTF-8"><title>Host app</title></head><body><h1>Host app</h1></body></html>');
+  await writeFile(join(folder,'shader-preview.html'),'<!doctype html><html lang="en"><head><meta charset="UTF-8"><title>Shader preview</title></head><body><div id="root"></div><script type="module" src="/shader-preview/main.tsx"></script></body></html>');
+  await writeFile(join(shell,'main.tsx'),`import {createRoot} from 'react-dom/client';
+import {GodRays, MeshGradient} from '@paper-design/shaders-react';
+import {ShaderPreview} from './ShaderPreview';
+createRoot(document.getElementById('root')!).render(<ShaderPreview lang="en" title="Hero background: two readings of light" candidates={[
+  {id:'rays',title:'Rays',effect:'GodRays',description:'A beam of warm light on a dark ground',
+    controls:[{id:'speed',label:'Speed',min:0,max:2,step:0.05,value:1,unit:'×'}],
+    render:({playing,values})=><GodRays style={{width:'100%',height:'100%'}} colorBack="#0b0b12" colors={['#ffd9a0','#ff9e6b']} speed={playing?0.6*values.speed:0}/>},
+  {id:'flow',title:'Flow',effect:'MeshGradient',description:'Slow multicolour shapes across the whole frame',
+    render:({playing})=><MeshGradient style={{width:'100%',height:'100%'}} colors={['#1b2a49','#4f7cac','#c0e0de','#f4d58d']} speed={playing?0.3:0}/>},
+]}/>);
+`);
+  console.log(`preview-page: installing Paper ${version} for the preview page`);
+  await run('npm',['install','--package-lock-only','--no-audit','--no-fund'],folder);
+  await run('npm',['ci','--no-audit','--no-fund'],folder);
+  const installed=JSON.parse(await readFile(join(folder,'node_modules/@paper-design/shaders/package.json'),'utf8')).version;
+  assert.equal(installed,version);
+  const session=await start(folder,{path:'/shader-preview.html',command:port=>[process.execPath,'node_modules/vite/bin/vite.js','--host','127.0.0.1','--port',String(port),'--strictPort']});
+  const page=await browser.newPage({viewport:{width:1280,height:860},deviceScaleFactor:1});
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>m.type()==='error'&&errors.push(m.text()));
+  await page.goto(session.url);
+  await page.waitForFunction(()=>document.querySelectorAll('.sp-root [data-paper-shader] canvas').length===3 && document.querySelector('.sp-content [data-paper-shader]')?.paperShaderMount);
+  await page.getByRole('button',{name:'View Flow'}).click();
+  await page.waitForFunction(()=>location.hash==='#flow' && document.querySelector('.sp-content [data-paper-shader]')?.paperShaderMount);
+  await page.screenshot({path:join(output,`preview-page-${version}.png`)});
+  assert.deepEqual(errors,[]);
+  await page.close();
+  session.child.kill();await once(session.child,'exit');
+  await assert.rejects(fetch(`http://127.0.0.1:${session.port}/`));
+  await run(process.execPath,['node_modules/vite/bin/vite.js','build'],folder);
+  await stat(join(folder,'dist/index.html'));
+  await assert.rejects(stat(join(folder,'dist/shader-preview.html')));
+  console.log(`preview-page: candidates render with Paper ${version}; the dev-only entry stays out of the build`);
+  return {version,app:folder,checks:['assets/preview copied unchanged','Paper pinned to the host version','dev-only HTML entry','started and stopped through the CLI','stage and thumbnails render','candidate switch updates the hash','no page or console errors','production build leaves the preview out']};
+}
 try {
   const experiment=await installHost('experiment','0.0.81',false);
   const workspace=await installHost('workspace','0.0.80',true);
@@ -95,6 +139,7 @@ try {
     results.push({version:host.version,app:host.app,paperPath:host.paperPath,checks:['independent npm ci','pre-migration host build','workspace or local package resolution','SSR HTML and hydration','local texture','404 recovery','unmount/remount','mobile screenshot','host-owned PNG and H.264 export','lockfile unchanged']});
     await page.close();
   }
+  results.push(await previewPage(workspace.version));
   await writeFile(join(output,'results.json'),JSON.stringify({root,results},null,2));
   console.log(JSON.stringify({passed:results},null,2));
 } finally {
