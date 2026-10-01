@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "shader-visual-kit",
+  "description": "Marketplace for shader-visual-kit — a Paper Shaders integration skill with a preview CLI.",
+  "owner": {
+    "name": "Zane"
+  },
+  "plugins": [
+    {
+      "name": "shader-visual-kit",
+      "description": "Integrate Paper Shaders into real host projects: pick an effect from a written description, debug rendering, textures, performance and lifecycle, render deterministic Remotion frames with a copyable PaperFrame helper, and start an on-demand page preview.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Zane"
+      },
+      "source": "./plugin",
+      "category": "development",
+      "keywords": ["paper-shaders","webgl","shaders","remotion","visual-effects","preview"]
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "name": "shader-visual-kit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Agent skill and Windows preview CLI for integrating Paper Shaders into host projects",
+  "license": "MIT",
+  "author": "Zane",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Zane-0x5a/shader-visual-kit.git"
+  },
+  "homepage": "https://github.com/Zane-0x5a/shader-visual-kit#readme",
+  "bugs": "https://github.com/Zane-0x5a/shader-visual-kit/issues",
+  "keywords": [
+    "paper-shaders",
+    "webgl",
+    "shaders",
+    "remotion",
+    "agent-skills",
+    "claude-code",
+    "codex"
+  ],
+  "bin": {
+    "shader-visual-kit": "cli/index.mjs"
+  },
+  "files": [
+    "cli/"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "test": "node --test --test-concurrency=1 tests/cli.test.mjs tests/package.test.mjs",
+    "test:render": "node tests/render.mjs",
+    "test:player": "node tests/player.mjs",
+    "test:hosts": "node tests/hosts.mjs",
+    "typecheck": "tsc --noEmit",
+    "dev:fixture": "vite tests/fixtures/player --host 127.0.0.1 --port 5187 --strictPort"
+  },
+  "dependencies": {
+    "cross-spawn": "7.0.6",
+    "koffi": "3.3.1"
+  },
+  "devDependencies": {
+    "@paper-design/shaders": "0.0.81",
+    "@paper-design/shaders-react": "0.0.81",
+    "@remotion/bundler": "4.0.526",
+    "@remotion/player": "4.0.526",
+    "@remotion/renderer": "4.0.526",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "playwright": "1.63.0",
+    "pngjs": "7.0.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "remotion": "4.0.526",
+    "typescript": "7.0.2",
+    "vite": "8.3.0"
+  }
+}

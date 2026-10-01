@@ -1,0 +1,25 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "shader-visual-kit",
+  "version": "0.1.0",
+  "description": "Integrate Paper Shaders into real host projects: pick an effect from a written description, debug rendering, textures, performance and lifecycle, render deterministic Remotion frames with a copyable PaperFrame helper, and start an on-demand page preview.",
+  "author": {
+    "name": "Zane"
+  },
+  "homepage": "https://github.com/Zane-0x5a/shader-visual-kit",
+  "license": "MIT",
+  "keywords": ["paper-shaders","webgl","shaders","remotion","visual-effects","preview"],
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Shader Visual Kit",
+        "shortDescription": "Use Paper Shaders natively in your web and Remotion projects.",
+        "longDescription": "Integrate Paper Shaders into real host projects: pick an effect from a written description, debug rendering, textures, performance and lifecycle, render deterministic Remotion frames with a copyable PaperFrame helper, and start an on-demand page preview.",
+        "developerName": "Zane",
+        "category": "Coding",
+        "capabilities": ["Paper Shaders integration", "Remotion frame rendering", "page preview"],
+        "defaultPrompt": "Add a Paper Shaders effect to this project: "
+      }
+    }
+  }
+}

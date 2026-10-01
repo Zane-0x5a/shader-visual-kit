@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ES2022"
+    ],
+    "allowImportingTsExtensions": true
+  },
+  "include": [
+    "plugin/skills/shader-visual-kit/assets/**/*.tsx",
+    "tests/fixtures/**/*.tsx",
+    "tests/fixtures/**/*.ts"
+  ],
+  "exclude": ["tests/fixtures/host"]
+}
