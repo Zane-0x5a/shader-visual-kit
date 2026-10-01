@@ -1,10 +1,16 @@
 # shader-visual-kit
 
+<p align="center"><img src="docs/assets/hero.webp" alt="Paper Shaders 的 MeshGradient 缓缓卷成漩涡" width="100%"></p>
+
 让 Agent 在真实项目里用好 [Paper Shaders](https://shaders.paper.design) 的 Skill：网页、React 或原生 JS 应用、Remotion 视频都适用；另附一个 Windows 小工具，按需启动项目的预览服务，并保证结束时清理干净。
 
 Paper 依赖、参数、预设和素材始终归你的项目所有。本 Skill 是开发期知识与可复制的辅助代码，不是运行时封装；不需要 Paper Desktop。
 
 <sub>非官方项目，与 Paper 无隶属关系。 · [English →](README.md)</sub>
+
+<p align="center"><img src="docs/assets/effects.webp" alt="五个原生 Paper 效果：三个 MeshGradient、一个 SmokeRing、一个 NeuroNoise" width="100%"></p>
+
+<p align="center"><sub>原生 Paper 组件加精选参数——MeshGradient、SmokeRing、NeuroNoise——出自仓库自带的<a href="#演示画廊">演示画廊</a>。</sub></p>
 
 ## 能做什么
 
@@ -62,6 +68,19 @@ node <工具目录>/node_modules/shader-visual-kit/cli/index.mjs preview --proje
 
 之所以用 node 直接运行：有些 Agent 宿主停止后台任务时，只结束它亲自启动的那个进程（例如 Windows 上 Git Bash 里的 Claude Code）。中间隔着 npx 或 npm 的 shell 包装时，Git Bash 模拟的 fork 会让 Windows 父进程链断开，停止到不了 CLI；直接运行时能到达，作业随之清理。请让 CLI 留在调用方持有的任务里：以 `Start-Process`、`start`、`nohup &` 等方式脱离启动时，启动者一退出预览就会停止，CLI 会输出原因。
 
+## 演示画廊
+
+仓库附带一个小画廊，收录五个精选的 Paper 效果，可以播放暂停、全屏沉浸、轻度微调和保存 PNG 截帧。它用来展示原生 Paper 组件能做出的样子，不是项目要引入的代码。
+
+```text
+npm ci
+npm run demo
+```
+
+然后打开 `http://127.0.0.1:5188/`。
+
+<p align="center"><img src="docs/assets/gallery.webp" alt="演示画廊：上方是大幅的余晖 MeshGradient，下方是五个效果缩略图" width="100%"></p>
+
 ## 环境要求
 
 - **Skill：** 支持 Agent Skills 的任意宿主。项目自行安装 `@paper-design/shaders` / `@paper-design/shaders-react`，做视频时再装 Remotion。
@@ -92,6 +111,8 @@ plugin/                         Agent 宿主实际安装的内容
   plugin.json                     通用（portable）插件清单
   skills/shader-visual-kit/       SKILL.md、references/、assets/PaperFrame.tsx
 cli/                            预览 CLI，按 git 标签安装
+demo/gallery/                   演示画廊（npm run demo）
+docs/assets/                    README 配图，由 npm run demo:capture 重新生成
 tests/                          CLI、发布一致性、Remotion 渲染 / Player 与宿主测试
 .claude-plugin/marketplace.json Claude Code marketplace
 .agents/plugins/marketplace.json Codex marketplace
@@ -108,7 +129,7 @@ npm run test:player
 npm run test:hosts
 ```
 
-渲染与 Player 测试使用 Remotion 或 Playwright 的浏览器；设置 `REMOTION_BROWSER_EXECUTABLE` 可改用本机 Chromium。`test:hosts` 需要访问 npm 网络。
+渲染与 Player 测试使用 Remotion 或 Playwright 的浏览器；设置 `REMOTION_BROWSER_EXECUTABLE` 可改用本机 Chromium。`test:hosts` 需要访问 npm 网络。`npm run demo:capture` 会在固定的 Paper 帧上从演示画廊重新渲染 README 配图，需要 PATH 中有 ffmpeg。
 
 发版时同步修改 `package.json`、三个插件清单、Claude marketplace 条目中的版本，以及 `references/preview.md` 和两份 README 里固定的 CLI 标签（不一致时 `npm test` 会失败），再推送 `vX.Y.Z` 标签。
 

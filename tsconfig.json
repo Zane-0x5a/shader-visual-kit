@@ -16,6 +16,7 @@
   },
   "include": [
     "plugin/skills/shader-visual-kit/assets/**/*.tsx",
+    "demo/**/*.tsx",
     "tests/fixtures/**/*.tsx",
     "tests/fixtures/**/*.ts"
   ],

@@ -36,13 +36,17 @@
     "test:player": "node tests/player.mjs",
     "test:hosts": "node tests/hosts.mjs",
     "typecheck": "tsc --noEmit",
-    "dev:fixture": "vite tests/fixtures/player --host 127.0.0.1 --port 5187 --strictPort"
+    "demo": "vite demo/gallery --host 127.0.0.1 --port 5188 --strictPort",
+    "demo:capture": "node demo/capture.mjs",
+    "dev:checks": "vite tests/fixtures/player --host 127.0.0.1 --port 5187 --strictPort"
   },
   "dependencies": {
     "cross-spawn": "7.0.6",
     "koffi": "3.3.1"
   },
   "devDependencies": {
+    "@fontsource/dm-sans": "5.3.0",
+    "@fontsource/instrument-serif": "5.3.0",
     "@paper-design/shaders": "0.0.81",
     "@paper-design/shaders-react": "0.0.81",
     "@remotion/bundler": "4.0.526",
@@ -50,6 +54,7 @@
     "@remotion/renderer": "4.0.526",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "lucide-react": "1.47.0",
     "playwright": "1.63.0",
     "pngjs": "7.0.0",
     "react": "19.3.0",
