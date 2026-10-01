@@ -98,7 +98,7 @@ Paper Shaders 0.0.81（撰写时的最新版本）、Remotion 4.0.526、Chromium
 | `npm run test:player` | Remotion Player：超大纹理、空纹理分配、慢速失败的快速切换、加载中卸载、上下文丢失、超时、WebGL 不可用时错误可见，并能恢复 |
 | `npm run test:hosts` | 在临时目录建两个独立宿主（Paper 0.0.81 独立项目、0.0.80 npm workspace），各自按 lockfile 安装，经 CLI 启动，检查 SSR、hydration 与恢复，并导出 PNG 和 H.264 |
 
-另外在隔离的 Claude Code 与 Codex 配置中验证了从仓库目录安装插件（插件缓存里只有 Skill，Codex 能列出它）；并在 Git Bash 与 PowerShell 中把 CLI 作为真实后台任务停止，没有残留进程。
+另外在隔离的 Claude Code 与 Codex 配置中验证了从 GitHub 安装插件（插件缓存里只有 Skill，Codex 能列出它），以及 `npx skills` 的发现和按标签安装 CLI。在 Git Bash 与 PowerShell 中把 CLI 作为真实后台任务停止，没有残留进程；一个从未见过本 Skill 的 Agent 按 `preview.md` 完整走通了流程：安装 CLI、启动宿主的 npm dev 脚本、检查页面，并干净地停止。
 
 不承诺：跨 GPU 像素一致、覆盖全部 Paper 效果、已测之外的框架（如 Next.js RSC）。其他版本请在自己的项目中验证。
 
@@ -112,7 +112,7 @@ plugin/                         Agent 宿主实际安装的内容
   skills/shader-visual-kit/       SKILL.md、references/、assets/PaperFrame.tsx
 cli/                            预览 CLI，按 git 标签安装
 demo/gallery/                   演示画廊（npm run demo）
-docs/assets/                    README 配图，由 npm run demo:capture 重新生成
+docs/assets/                    README 与社交预览配图（npm run demo:capture）
 tests/                          CLI、发布一致性、Remotion 渲染 / Player 与宿主测试
 .claude-plugin/marketplace.json Claude Code marketplace
 .agents/plugins/marketplace.json Codex marketplace

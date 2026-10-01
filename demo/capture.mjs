@@ -57,6 +57,24 @@ try {
   }
   ffmpeg('-framerate', '24', '-i', join(frames, 'hero-%03d.png'), '-filter_complex', '[0:v]scale=1200:-2:flags=lanczos,split[a][b];[b]reverse[r];[a][r]concat=n=2:v=1', '-loop', '0', '-quality', '82', '-compression_level', '6', join(out, 'hero.webp'));
 
+  // Repository social preview (1280x640), set by hand in GitHub settings. Reuses the gallery's fonts.
+  await setFrame(start + 60 * step);
+  await settle();
+  const backdrop = await canvas();
+  await page.setViewportSize({width: 1280, height: 640});
+  await page.evaluate(backdrop => {
+    document.body.innerHTML = `<div style="position:fixed;inset:0;background:#171916 url(${backdrop}) center/cover">
+      <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(23,25,22,.88) 0%,rgba(23,25,22,.55) 48%,rgba(23,25,22,0) 78%)"></div>
+      <div style="position:absolute;left:84px;bottom:92px;color:#f4efe6">
+        <div style="font:400 104px/1 'Instrument Serif',serif;letter-spacing:-1px">shader-visual-kit</div>
+        <div style="margin-top:26px;font:400 30px/1.35 'DM Sans',sans-serif;color:#e8e2d6;max-width:640px">Paper Shaders, natively, in your real web and Remotion projects.</div>
+        <div style="margin-top:22px;font:500 20px/1 'DM Sans',sans-serif;color:#c9c2b4;letter-spacing:.5px">Agent skill · PaperFrame for Remotion · Windows preview CLI</div>
+      </div></div>`;
+  }, backdrop);
+  await page.evaluate(() => document.fonts.ready);
+  await page.screenshot({path: join(frames, 'social.png')});
+  ffmpeg('-i', join(frames, 'social.png'), '-vf', 'scale=1280:640:flags=lanczos', join(out, 'social-preview.png'));
+
   if (errors.length) throw new Error(`Page errors: ${errors.join('; ')}`);
   console.log(`README media written to ${out}`);
 } finally {
