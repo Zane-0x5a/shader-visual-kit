@@ -42,9 +42,9 @@ try {
     await save(file, await canvas());
     stills.push(file);
   }
-  // Five centre-cropped portrait tiles with thin gutters.
+  // Five centre-cropped portrait tiles with thin gutters between them, none at the outer edges.
   const tiles = stills.map((_, i) => `[${i}:v]crop=ih*0.62:ih,scale=-2:560:flags=lanczos,pad=iw+12:ih:6:0:color=0x171916[t${i}]`).join(';');
-  ffmpeg(...stills.flatMap(file => ['-i', file]), '-filter_complex', `${tiles};${stills.map((_, i) => `[t${i}]`).join('')}hstack=inputs=${stills.length}`, '-quality', '86', join(out, 'effects.webp'));
+  ffmpeg(...stills.flatMap(file => ['-i', file]), '-filter_complex', `${tiles};${stills.map((_, i) => `[t${i}]`).join('')}hstack=inputs=${stills.length},crop=iw-12:ih:6:0`, '-quality', '86', join(out, 'effects.webp'));
 
   // Hero loop: the first artwork moving forward, then back, so the loop has no seam.
   await page.getByRole('button', {name: ids[0]}).click();
@@ -55,7 +55,7 @@ try {
     await settle();
     await save(join(frames, `hero-${String(i).padStart(3, '0')}.png`), await canvas());
   }
-  ffmpeg('-framerate', '24', '-i', join(frames, 'hero-%03d.png'), '-filter_complex', '[0:v]scale=1200:-2:flags=lanczos,split[a][b];[b]reverse[r];[a][r]concat=n=2:v=1', '-loop', '0', '-quality', '62', '-compression_level', '6', join(out, 'hero.webp'));
+  ffmpeg('-framerate', '24', '-i', join(frames, 'hero-%03d.png'), '-filter_complex', '[0:v]scale=1200:-2:flags=lanczos,split[a][b];[b]reverse[r];[a][r]concat=n=2:v=1', '-loop', '0', '-quality', '82', '-compression_level', '6', join(out, 'hero.webp'));
 
   if (errors.length) throw new Error(`Page errors: ${errors.join('; ')}`);
   console.log(`README media written to ${out}`);
