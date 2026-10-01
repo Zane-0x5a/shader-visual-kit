@@ -12,7 +12,7 @@ Paper 依赖、参数、预设和素材始终归你的项目所有。本 Skill �
 - **原生接入。** React 用 `@paper-design/shaders-react`，其他浏览器宿主用 `@paper-design/shaders` 的 `ShaderMount`，在客户端挂载、卸载时销毁。效果与参数以 Paper 官方文档和项目已安装的类型为准，工具不维护白名单。
 - **常见坑。** 整页背景的层级、`requestAnimationFrame` 按显示器刷新率持续重绘及其预算、非方形元素上默认 `fit`/`scale` 把图形缩成方块、互补色平均成灰褐、嵌入式 WebView 隐藏后收不到隐藏通知。
 - **Remotion。** 把视频帧换算为 Paper 的毫秒时间，并提供可复制到项目里的 [`PaperFrame.tsx`](plugin/skills/shader-visual-kit/assets/PaperFrame.tsx)：纹理解码、布局稳定、GPU 完成之后才放行当前帧；出错时取消渲染，不导出错误画面。
-- **预览 CLI（Windows）。** 在 Windows 作业对象里运行项目自己的启动命令；只有 URL 有响应、且监听进程属于这个作业时才报告 `address-responsive`。端口被占用时拒绝启动，不接管已有服务；按 Ctrl+C、CLI 被强制结束、或启动它的上层进程退出时，整棵进程树都会被清理。
+- **预览 CLI（Windows）。** 在 Windows 作业对象里运行项目自己的启动命令；只有 URL 有响应、且监听进程属于这个作业时才报告 `address-responsive`。端口被占用时拒绝启动，不接管已有服务；按 Ctrl+C、CLI 被强制结束、或其 Windows 父进程链上的启动者退出时，整棵进程树都会被清理。
 
 ## 安装
 
@@ -58,9 +58,9 @@ npm install --prefix <工具目录> github:Zane-0x5a/shader-visual-kit#v0.1.0
 node <工具目录>/node_modules/shader-visual-kit/cli/index.mjs preview --project <宿主目录> --url http://127.0.0.1:5173/ --json -- npm run dev -- --port 5173 --strictPort
 ```
 
-工具事件（`starting`、`address-responsive`、`error`、`stopped`）以 JSON 行写到 stdout，宿主日志写到 stderr。`address-responsive` 只证明本作业的监听进程返回了 HTTP 2xx，不代表画面正确。
+工具事件（`starting`、`address-responsive`、`warning`、`error`、`cleanup-error`、`stopped`）以 JSON 行写到 stdout，宿主日志写到 stderr。`address-responsive` 只证明本作业的监听进程返回了 HTTP 2xx，不代表画面正确。
 
-之所以用 node 直接运行：有些 Agent 宿主停止后台任务时，只结束它亲自启动的那个进程（例如 Windows 上 Git Bash 里的 Claude Code）。中间隔着 npx 或 npm 的 shell 包装时，停止到不了 CLI；直接运行时能到达，作业随之清理。
+之所以用 node 直接运行：有些 Agent 宿主停止后台任务时，只结束它亲自启动的那个进程（例如 Windows 上 Git Bash 里的 Claude Code）。中间隔着 npx 或 npm 的 shell 包装时，Git Bash 模拟的 fork 会让 Windows 父进程链断开，停止到不了 CLI；直接运行时能到达，作业随之清理。请让 CLI 留在调用方持有的任务里：以 `Start-Process`、`start`、`nohup &` 等方式脱离启动时，启动者一退出预览就会停止，CLI 会输出原因。
 
 ## 环境要求
 
@@ -74,7 +74,7 @@ Paper Shaders 0.0.81（撰写时的最新版本）、Remotion 4.0.526、Chromium
 
 | 命令 | 覆盖 |
 | --- | --- |
-| `npm test` | 12 项真实 Windows 进程上的 CLI 集成测试：含空格和中文的路径，`& \| < > ^ % !` 等参数原样传递，端口占用、重定向、超时、强制终止、启动器退出、启动竞态中外来监听的保护；以及版本、安装内容、打包文件的发布一致性检查 |
+| `npm test` | 12 项真实 Windows 进程上的 CLI 集成测试：含空格和中文的路径，`& \| < > ^ % !` 等参数原样传递，端口占用、重定向、超时、强制终止、中间启动器被结束、启动器先退出而服务仍在、启动竞态中外来监听的保护；以及版本、安装内容、打包文件的发布一致性检查 |
 | `npm run test:render` | 经真实 Remotion 渲染器验证 `PaperFrame`：GPU 上传失败取消输出，原生 mipmap 采样逐像素一致，重复、乱序、并发取帧一致，慢纹理，404 / CORS / 无效 shader / 零尺寸均拒绝，导出 H.264 |
 | `npm run test:player` | Remotion Player：超大纹理、空纹理分配、慢速失败的快速切换、加载中卸载、上下文丢失、超时、WebGL 不可用时错误可见，并能恢复 |
 | `npm run test:hosts` | 在临时目录建两个独立宿主（Paper 0.0.81 独立项目、0.0.80 npm workspace），各自按 lockfile 安装，经 CLI 启动，检查 SSR、hydration 与恢复，并导出 PNG 和 H.264 |
@@ -88,7 +88,8 @@ Paper Shaders 0.0.81（撰写时的最新版本）、Remotion 4.0.526、Chromium
 ```text
 plugin/                         Agent 宿主实际安装的内容
   .claude-plugin/plugin.json      Claude Code 清单
-  plugin.json                     Codex（portable）清单
+  .codex-plugin/plugin.json       Codex 清单
+  plugin.json                     通用（portable）插件清单
   skills/shader-visual-kit/       SKILL.md、references/、assets/PaperFrame.tsx
 cli/                            预览 CLI，按 git 标签安装
 tests/                          CLI、发布一致性、Remotion 渲染 / Player 与宿主测试
@@ -109,7 +110,7 @@ npm run test:hosts
 
 渲染与 Player 测试使用 Remotion 或 Playwright 的浏览器；设置 `REMOTION_BROWSER_EXECUTABLE` 可改用本机 Chromium。`test:hosts` 需要访问 npm 网络。
 
-发版时同步修改 `package.json`、两个插件清单、Claude marketplace 条目中的版本，以及 `references/preview.md` 里的标签（不一致时 `npm test` 会失败），再推送 `vX.Y.Z` 标签。
+发版时同步修改 `package.json`、三个插件清单、Claude marketplace 条目中的版本，以及 `references/preview.md` 和两份 README 里固定的 CLI 标签（不一致时 `npm test` 会失败），再推送 `vX.Y.Z` 标签。
 
 ## 许可证
 

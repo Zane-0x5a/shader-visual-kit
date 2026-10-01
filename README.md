@@ -12,7 +12,7 @@ Your project keeps owning Paper, its parameters, presets and assets. The skill i
 - **Native integration.** `@paper-design/shaders-react` in React, `ShaderMount` from `@paper-design/shaders` in other browser hosts, mounted on the client and disposed on unmount. Effects and parameters come from Paper's own docs and your installed types, not from a whitelist kept by this tool.
 - **Known pitfalls.** Full-page background stacking order, continuous `requestAnimationFrame` redraws at the display's refresh rate and how to budget them, default `fit`/`scale` shrinking effects on non-square elements, complementary hues averaging into mud, and embedded WebViews that never report being hidden.
 - **Remotion.** Maps video frames to Paper's millisecond time and ships [`PaperFrame.tsx`](plugin/skills/shader-visual-kit/assets/PaperFrame.tsx), a helper you copy into your project. It holds each frame until textures are decoded, layout has settled and the GPU has finished, and fails the render rather than exporting a wrong frame.
-- **Preview CLI (Windows).** Runs your project's own dev command inside a Windows Job Object and reports `address-responsive` only when the URL answers *and* the listener belongs to that job. It refuses occupied ports instead of adopting them, and the whole process tree goes away when you press Ctrl+C, when the CLI is killed, or when whatever launched it exits.
+- **Preview CLI (Windows).** Runs your project's own dev command inside a Windows Job Object and reports `address-responsive` only when the URL answers *and* the listener belongs to that job. It refuses occupied ports instead of adopting them, and the whole process tree goes away when you press Ctrl+C, when the CLI is killed, or when a launcher in its Windows parent chain exits.
 
 ## Install
 
@@ -60,9 +60,9 @@ npm install --prefix <tool-dir> github:Zane-0x5a/shader-visual-kit#v0.1.0
 node <tool-dir>/node_modules/shader-visual-kit/cli/index.mjs preview --project <host-dir> --url http://127.0.0.1:5173/ --json -- npm run dev -- --port 5173 --strictPort
 ```
 
-Tool events (`starting`, `address-responsive`, `error`, `stopped`) are JSON lines on stdout; host logs go to stderr. `address-responsive` proves HTTP 2xx from a listener this job owns — not that the page looks right.
+Tool events (`starting`, `address-responsive`, `warning`, `error`, `cleanup-error`, `stopped`) are JSON lines on stdout; host logs go to stderr. `address-responsive` proves HTTP 2xx from a listener this job owns — not that the page looks right.
 
-Running the entry with node directly matters: some agent hosts stop a background task by ending the process they started (for example, Claude Code on Windows under Git Bash). Behind npx or an npm shell wrapper, that stop never reaches the CLI; with node, it does, and the job is cleaned up.
+Running the entry with node directly matters: some agent hosts stop a background task by ending the process they started (for example, Claude Code on Windows under Git Bash). Behind npx or an npm shell wrapper, that stop never reaches the CLI, because Git Bash's emulated fork breaks the Windows parent chain; with node, it does, and the job is cleaned up. Keep the CLI in a task its caller holds: a detached launch (`Start-Process`, `start`, `nohup &`) stops the preview when its launcher exits, and the CLI says so.
 
 ## Requirements
 
@@ -76,7 +76,7 @@ Paper Shaders 0.0.81 (the latest release at the time of writing), Remotion 4.0.5
 
 | Command | Covers |
 | --- | --- |
-| `npm test` | 12 CLI integration tests on real Windows processes — spaced and Chinese paths, argument fidelity including `& \| < > ^ % !`, occupied ports, redirects, timeouts, forced termination, launcher exit, a foreign listener winning the startup race — plus release-consistency checks for versions, install payload and package contents |
+| `npm test` | 12 CLI integration tests on real Windows processes — spaced and Chinese paths, argument fidelity including `& \| < > ^ % !`, occupied ports, redirects, timeouts, forced termination, an intermediate launcher being terminated, a launcher that exits while its server lives on, a foreign listener winning the startup race — plus release-consistency checks for versions, install payload and package contents |
 | `npm run test:render` | `PaperFrame` through the real Remotion renderer: GPU upload failure cancels output, native mipmap sampling matches pixel for pixel, repeated / out-of-order / concurrent frames are identical, slow textures, 404 / CORS / invalid shader / zero size rejected, H.264 export |
 | `npm run test:player` | Remotion Player: visible failure and recovery for oversized textures, null texture allocation, rapid slow-failing switches, unmount while loading, context loss, timeouts and missing WebGL |
 | `npm run test:hosts` | Two independent host projects in a temp directory (Paper 0.0.81 standalone, 0.0.80 in an npm workspace), each installed from its own lockfile, run through the CLI, checked for SSR, hydration and recovery, and exported to PNG and H.264 |
@@ -90,7 +90,8 @@ Not promised: identical pixels across GPUs, every Paper effect, or frameworks be
 ```text
 plugin/                         What agent hosts install
   .claude-plugin/plugin.json      Claude Code manifest
-  plugin.json                     Codex (portable) manifest
+  .codex-plugin/plugin.json       Codex manifest
+  plugin.json                     Portable plugin manifest
   skills/shader-visual-kit/       SKILL.md, references/, assets/PaperFrame.tsx
 cli/                            Preview CLI, installed from git tags
 tests/                          CLI, release, Remotion render / Player and host tests
@@ -111,7 +112,7 @@ npm run test:hosts
 
 The render and Player tests use Remotion's browser or Playwright's; set `REMOTION_BROWSER_EXECUTABLE` to use a local Chromium. `test:hosts` needs network access to npm.
 
-To release, bump the version in `package.json`, both plugin manifests, the Claude marketplace entry and the tag in `references/preview.md` (`npm test` fails if they disagree), then push a `vX.Y.Z` tag.
+To release, bump the version in `package.json`, the three plugin manifests and the Claude marketplace entry, and the pinned CLI tag in `references/preview.md` and both READMEs (`npm test` fails if they disagree), then push a `vX.Y.Z` tag.
 
 ## License
 

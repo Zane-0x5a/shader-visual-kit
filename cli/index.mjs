@@ -9,8 +9,10 @@ import {portOccupied, assertListenerOwned} from './processes.mjs';
 const help = `shader-visual-kit preview --project <directory> --url <http://127.0.0.1:port/path> [--timeout <milliseconds, default 120000>] [--json] -- <command> <args...>
 
 Runs an existing project command without changing dependencies or opening a browser.
-The process remains in the foreground. Ctrl+C stops its process tree, and so does
-the exit of any process that launched it, including wrappers such as npx.
+The process remains in the foreground. Ctrl+C stops its process tree, and so does the
+exit of any launcher in its Windows parent chain. Git Bash's npm/npx shell wrappers
+break that chain, so start this entry with node there. Detached launches (Start-Process,
+start, nohup &) stop when their launcher exits.
 "address-responsive" confirms HTTP and listener ownership, not visual correctness.
 Windows is the currently validated platform. Existing servers should be opened directly.
 `;
@@ -23,16 +25,18 @@ export async function main(argv = process.argv.slice(2)) {
   let watch;
   let stopping = false;
   let signalCode = 0;
-  let emit = event => process.stderr.write(JSON.stringify(event)+'\n');
+  const split = argv.indexOf('--');
+  const json = argv.slice(1, split<0 ? argv.length : split).includes('--json');
+  const emit = event => process.stdout.write(json ? JSON.stringify(event)+'\n' : `[${event.type}] ${event.message || event.url || ''}\n`);
   const abort = new AbortController();
   const cancel = signal => {signalCode={SIGINT:130,SIGTERM:143,SIGHUP:129}[signal];stopping=true;abort.abort();};
   const interrupt=()=>cancel('SIGINT');
   const terminate=()=>cancel('SIGTERM');
   try {
-    const split = argv.indexOf('--');
     if(argv[0]!=='preview' || split<0 || !argv[split+1])throw new Error('Expected preview options followed by -- and a project command');
-    const {values} = parseArgs({args:argv.slice(1,split),options:{project:{type:'string'},url:{type:'string'},timeout:{type:'string',default:'120000'},json:{type:'boolean'}}});
-    emit = event => process.stdout.write(values.json ? JSON.stringify(event)+'\n' : `[${event.type}] ${event.message || event.url || ''}\n`);
+    let values;
+    try {({values} = parseArgs({args:argv.slice(1,split),options:{project:{type:'string'},url:{type:'string'},timeout:{type:'string',default:'120000'},json:{type:'boolean'}}}));}
+    catch(error) {throw new Error(`${error.message}. Options for the project command go after --`);}
     if(!values.project || !values.url)throw new Error('--project and --url are required');
     const project = await realpath(values.project);
     if(!(await stat(project)).isDirectory())throw new Error('--project must be a directory');
@@ -45,8 +49,14 @@ export async function main(argv = process.argv.slice(2)) {
     process.on('SIGINT',interrupt);process.on('SIGTERM',terminate);
     const {createJob} = await import('./windows-job.mjs');
     const {watchAncestors} = await import('./windows-ancestors.mjs');
-    caller = watchAncestors();
-    watch = setInterval(()=>{if(!stopping && caller.exited())cancel('SIGHUP');},200);
+    try {caller = watchAncestors();}
+    catch(error) {emit({type:'warning',message:`Launcher exit will not be detected: ${error.message}`});}
+    watch = setInterval(()=>{
+      const gone = !stopping && caller?.exited();
+      if(!gone)return;
+      emit({type:'error',message:`Launcher ${gone.name} (pid ${gone.pid}) exited, so the preview stops with it. Keep the CLI in a task its caller holds instead of detaching it`});
+      cancel('SIGHUP');
+    },200);
     job = createJob();
     child=fork(fileURLToPath(new URL('./runner.mjs',import.meta.url)),[],{cwd:project,stdio:['ignore','pipe','pipe','ipc'],windowsHide:true});
     child.stdout.pipe(process.stderr);child.stderr.pipe(process.stderr);

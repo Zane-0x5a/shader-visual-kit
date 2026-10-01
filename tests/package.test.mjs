@@ -17,13 +17,16 @@ async function files(dir){
   return out;
 }
 
-test('every manifest and the preview command carry the package version',async()=>{
+test('every manifest and every pinned CLI tag carry the package version',async()=>{
   const claudeMarket=await json('.claude-plugin/marketplace.json');
-  const versions=[(await json('plugin/.claude-plugin/plugin.json')).version,(await json('plugin/plugin.json')).version,claudeMarket.plugins[0].version];
+  const manifests=['plugin/.claude-plugin/plugin.json','plugin/.codex-plugin/plugin.json','plugin/plugin.json'];
+  const versions=[...await Promise.all(manifests.map(async file=>(await json(file)).version)),claudeMarket.plugins[0].version];
   assert.deepEqual(versions,versions.map(()=>pkg.version));
-  const tags=[...(await read(`${skill}/references/preview.md`)).matchAll(/github:Zane-0x5a\/shader-visual-kit#v([\w.-]+)/g)].map(m=>m[1]);
-  assert.ok(tags.length>0);
-  assert.deepEqual(tags,tags.map(()=>pkg.version));
+  for(const file of [`${skill}/references/preview.md`,'README.md','README.zh-CN.md']){
+    const tags=[...(await read(file)).matchAll(/github:Zane-0x5a\/shader-visual-kit#v([\w.-]+)/g)].map(m=>m[1]);
+    assert.ok(tags.length>0,file);
+    assert.deepEqual(tags,tags.map(()=>pkg.version),file);
+  }
 });
 
 test('both marketplaces install the plugin directory that holds the skill',async()=>{

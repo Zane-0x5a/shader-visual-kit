@@ -17,6 +17,8 @@ test('help works without project or installed Paper',async()=>{const r=await run
 test('bad project and remote URL fail without starting command',async()=>{
  const r=await run(['preview','--project',project,'--url','https://example.com','--',process.execPath,'-e','process.exit(90)']);assert.equal(r.code,1);assert.match(r.stdout,/loopback/);
  const missing=await run(['preview','--project',join(project,'missing'),'--url','http://127.0.0.1:5678','--','node']);assert.equal(missing.code,1);
+ const unknown=await run(['preview','--project',project,'--url','http://127.0.0.1:5678','--port','5678','--json','--','node']);assert.equal(unknown.code,1);
+ assert.equal(JSON.parse(unknown.stdout).type,'error');assert.match(unknown.stdout,/go after --/);
 });
 test('existing port remains alive and is not adopted',async()=>{const s=createServer((q,r)=>r.end('existing'));await new Promise(r=>s.listen(0,'127.0.0.1',r));try{const port=s.address().port;const r=await run(args(port,process.execPath,'-e','process.exit(90)'));assert.equal(r.code,1);assert.match(r.stdout,/occupied/);assert.equal(await(await fetch(`http://127.0.0.1:${port}`)).text(),'existing');}finally{s.closeAllConnections();await new Promise(r=>s.close(r));}});
 test('missing executable and early exit fail',async()=>{const port=await free();for(const command of [['shader-no-such-executable'],[process.execPath,'-e','process.exit(7)']]){const r=await run(args(port,...command));assert.equal(r.code,1);assert.doesNotMatch(r.stdout,/address-responsive/);}});
@@ -46,9 +48,9 @@ test('forced CLI termination kills the owned job and grandchildren',async()=>{
   } finally {child.kill();}
 });
 
-test('caller exit through an intermediate launcher such as npx stops the owned job',async()=>{
+test('caller exit through an intermediate launcher stops the owned job and says why',async()=>{
   const port=await free();
-  // Mirrors npx under a host shell: caller -> launcher -> CLI, and only the launcher is terminated.
+  // Mirrors a node or cmd launcher between the caller and the CLI; only the launcher is terminated.
   // Detached, because libuv would otherwise kill the CLI through its own job instead of the watcher.
   const launcher=spawn(process.execPath,['-e',`require('child_process').spawn(process.execPath,${JSON.stringify([cli,...args(port,process.execPath,'server.mjs',String(port))])},{stdio:'inherit',windowsHide:true,detached:true});setInterval(()=>{},1e6);`],{windowsHide:true});
   let stdout='',stderr='';
@@ -59,6 +61,7 @@ test('caller exit through an intermediate launcher such as npx stops the owned j
     launcher.kill();
     await awaitClosed(port);
     for(let i=0;i<30 && !stdout.includes('"stopped"');i++)await sleep(100);
+    assert.match(stdout,/Launcher node\.exe \(pid \d+\) exited/,stderr);
     assert.match(stdout,/"stopped"/,stderr);
   } finally {launcher.kill();}
 });
